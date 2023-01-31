@@ -1,0 +1,14 @@
+{
+    "domain": "nationalrailuk",
+    "name": "National Rail UK",
+    "config_flow": true,
+    "documentation": "https://www.home-assistant.io/integrations/nationalrailuk",
+    "requirements": ["zeep[async]"],
+    "ssdp": [],
+    "zeroconf": [],
+    "homekit": {},
+    "dependencies": [],
+    "version": "0.0.1",
+    "codeowners": ["@jfparis"],
+    "iot_class": "cloud_polling"
+}
