@@ -112,7 +112,6 @@ class NationalRailClient:
 
             time = rebuild_date(time_base, service["std"])
 
-
             if service["etd"] == "On time":
                 expected = time
             else:
@@ -126,34 +125,30 @@ class NationalRailClient:
                 0
             ]["callingPoint"]
 
-            arrival_time = None
-            arrival_dest = None
+            # arrival_time = None
+            # arrival_dest = None
 
+            destination = None
             if len(self.destinations) == 0:
                 destination = destinations_list[-1]
-                arrival_dest = destination["locationName"]
-                if destination["et"] == "On time":
-                    arrival_time = rebuild_date(time_base, destination["st"])
-                else:
-                    arrival_time = rebuild_date(time_base, destination["et"])
-
             else:
-                for destination in destinations_list:
-                    if destination["crs"] in self.destinations:
-                        arrival_dest = destination["locationName"]
-                        if destination["et"] == "On time":
-                            arrival_time = rebuild_date(
-                                time_base, destination["st"]
-                            )
-                        else:
-                            arrival_time = rebuild_date(
-                                time_base, destination["et"]
-                            )
+                for each in destinations_list:
+                    if each["crs"] in self.destinations:
+                        destination = each
+                        break
 
-                # if national rail returned us a train not heading
-                # to our destination
-                if arrival_dest is None:
-                    continue
+            # if national rail returned us a train not heading
+            # to our destination
+            if destination is None:
+                continue
+
+            arrival_dest = destination["locationName"]
+            if destination["et"] == "On time":
+                arrival_time = rebuild_date(time_base, destination["st"])
+            elif destination["et"] == "Delayed":
+                arrival_time = "Delayed"
+            else:
+                arrival_time = rebuild_date(time_base, destination["et"])
 
             train["scheduled"] = time
             train["expected"] = expected
@@ -164,10 +159,16 @@ class NationalRailClient:
             train["platform"] = service["platform"]
             status["trains"].append(train)
 
-        status["trains"] = sorted(status["trains"], key=lambda d: d["expected"])
+        status["trains"] = sorted(
+            status["trains"],
+            key=lambda d: d["expected"]
+            if isinstance(d["expected"], datetime)
+            else d["scheduled"],
+        )
         status["next_train"] = status["trains"][0]["expected"]
         status["arrival_time"] = status["trains"][0]["time_at_destination"]
         status["terminus"] = status["trains"][0]["terminus"]
+        status["platform"] = status["trains"][0]["platform"]
         status["delay"] = sum(delays) / len(delays)
 
         return status
