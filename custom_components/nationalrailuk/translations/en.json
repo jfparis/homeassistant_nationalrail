@@ -4,16 +4,18 @@
             "already_configured": "Device is already configured"
         },
         "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
+            "invalid_token": "Invalid National Rail Token",
+            "invalid_station_input": "Invalid station/destination input",
             "unknown": "Unexpected error"
         },
         "step": {
             "user": {
+                "title": "Monitor one or more train routes",
+                "description": "Chose the train lines you want to monitor",
                 "data": {
-                    "api_token": "National Rail API Token",
-                    "station": "Origin Station",
-                    "destinations": "Destination Stations"
+                    "api_token": "Token for the National rail API",
+                    "station": "Departing station",
+                    "destinations": "Destination station. Multiple station musts be separated by a comma"
                 }
             }
         }
