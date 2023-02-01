@@ -99,26 +99,26 @@ class NationalRailClient:
 
         time_base = json_message["generatedAt"]
         if json_message["trainServices"] is None:
-            status["next_train"] = None
-            status["arrival_time"] = None
-            status["terminus"] = None
-            status["delay"] = 0
             return status
 
         services_list = json_message["trainServices"]["service"]
-        delays = []
         for service in services_list:
             train = {}
+            perturbation = False
 
             time = rebuild_date(time_base, service["std"])
 
             if service["etd"] == "On time":
                 expected = time
+            elif service["etd"] == "Delayed" or service["etd"] == "Cancelled":
+                expected = service["etd"]
+                perturbation = True
             else:
                 expected = rebuild_date(time_base, service["etd"])
+                delay = (expected - time).total_seconds() / 60
+                if delay > 9:
+                    perturbation = True
 
-            delay = (expected - time).total_seconds() / 60
-            delays.append(delay)
             terminus = service["destination"]["location"][0]["locationName"]
 
             destinations_list = service["subsequentCallingPoints"]["callingPointList"][
@@ -143,20 +143,26 @@ class NationalRailClient:
                 continue
 
             arrival_dest = destination["locationName"]
+            expected_arrival = rebuild_date(time_base, destination["st"])
             if destination["et"] == "On time":
-                arrival_time = rebuild_date(time_base, destination["st"])
-            elif destination["et"] == "Delayed":
-                arrival_time = "Delayed"
+                arrival_time = expected_arrival
+            elif destination["et"] == "Delayed" or destination["et"] == "Cancelled":
+                arrival_time = destination["et"]
+                perturbation = True
             else:
                 arrival_time = rebuild_date(time_base, destination["et"])
+                delay = (arrival_time - expected_arrival).total_seconds() / 60
+                if delay > 9:
+                    perturbation = True
 
             train["scheduled"] = time
             train["expected"] = expected
             train["terminus"] = terminus
             train["destination"] = arrival_dest
             train["time_at_destination"] = arrival_time
-            train["delay"] = delay
             train["platform"] = service["platform"]
+            train["perturbation"] = perturbation
+
             status["trains"].append(train)
 
         status["trains"] = sorted(
@@ -165,11 +171,6 @@ class NationalRailClient:
             if isinstance(d["expected"], datetime)
             else d["scheduled"],
         )
-        status["next_train"] = status["trains"][0]["expected"]
-        status["arrival_time"] = status["trains"][0]["time_at_destination"]
-        status["terminus"] = status["trains"][0]["terminus"]
-        status["platform"] = status["trains"][0]["platform"]
-        status["delay"] = sum(delays) / len(delays)
 
         return status
 

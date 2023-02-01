@@ -71,9 +71,9 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
                 and (time.time() - self.last_data_refresh) > 9.5 * 60
             )
             or (
-                len(self.data["trains"]) > 0
-                and datetime.now(self.data["trains"][0]["expected"].tzinfo)
-                >= self.data["trains"][0]["expected"] - timedelta(minutes=1)
+                self.data["next_train_scheduled"] is not None
+                and datetime.now(self.data["next_train_scheduled"].tzinfo)
+                >= self.data["next_train_scheduled"] - timedelta(minutes=1)
             )
         ):
             # try:
@@ -103,6 +103,33 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             data["name"] = self.sensor_name
             data["description"] = self.description
             data["friendly_name"] = self.friendly_name
+
+            data["next_train_scheduled"] = None
+            data["next_train_expected"] = None
+            data["arrival_time"] = None
+            data["terminus"] = None
+            data["platform"] = None
+            data["perturbations"] = False
+
+            for each in data["trains"]:
+                if data["next_train_scheduled"] is None and not (
+                    (
+                        isinstance(each["expected"], str)
+                        and each["expected"] == "Cancelled"
+                    )
+                    or (
+                        isinstance(each["time_at_destination"], str)
+                        and each["time_at_destination"] == "Cancelled"
+                    )
+                ):
+
+                    data["next_train_scheduled"] = each["scheduled"]
+                    data["next_train_expected"] = each["expected"]
+                    data["arrival_time"] = each["time_at_destination"]
+                    data["terminus"] = each["terminus"]
+                    data["platform"] = each["platform"]
+
+                data["perturbations"] = data["perturbations"] or each["perturbation"]
 
         else:
             data = self.data
@@ -141,4 +168,4 @@ class NationalRailSchedule(CoordinatorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        return self.coordinator.data["next_train"]
+        return self.coordinator.data["next_train_expected"]
