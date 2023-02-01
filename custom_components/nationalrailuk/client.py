@@ -5,7 +5,7 @@ import logging
 from zeep import AsyncClient, Settings, xsd
 from zeep.plugins import HistoryPlugin
 
-from .const import DOMAIN, WSDL
+from .const import WSDL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,15 +95,7 @@ class NationalRailClient:
 
         status = {}
         status["trains"] = []
-        origin_station = json_message["locationName"]
-        status["description"] = f"Departing trains schedule at {origin_station} station"
-        status["name"] = f"train_schedule_{self.station}{'_' + '_'.join(self.destinations) if len(self.destinations) >0 else ''}"
-
-        status["friendly_name"] = f"Train schedule at {origin_station} station"
-        if len(self.destinations) == 1:
-            status["friendly_name"] += f" heading to {self.destinations[0]}"
-        elif len(self.destinations) > 1:
-            status["friendly_name"] += f" heading to {'&'.join(self.destinations)}"
+        status["station"] = json_message["locationName"]
 
         time_base = json_message["generatedAt"]
         if json_message["trainServices"] is None:
@@ -140,30 +132,23 @@ class NationalRailClient:
             if len(self.destinations) == 0:
                 destination = destinations_list[-1]
                 arrival_dest = destination["locationName"]
-                try:
-                    if destination["et"] == "On time":
-                        arrival_time = rebuild_date(time_base, destination["st"])
-                    else:
-                        arrival_time = rebuild_date(time_base, destination["et"])
-                except BaseException as err:
-                    _LOGGER.exception("Exception whilst fetching data: ")
-                    raise err
+                if destination["et"] == "On time":
+                    arrival_time = rebuild_date(time_base, destination["st"])
+                else:
+                    arrival_time = rebuild_date(time_base, destination["et"])
+
             else:
                 for destination in destinations_list:
                     if destination["crs"] in self.destinations:
                         arrival_dest = destination["locationName"]
-                        try:
-                            if destination["et"] == "On time":
-                                arrival_time = rebuild_date(
-                                    time_base, destination["st"]
-                                )
-                            else:
-                                arrival_time = rebuild_date(
-                                    time_base, destination["et"]
-                                )
-                        except BaseException as err:
-                            _LOGGER.exception("Exception whilst fetching data: ")
-                            raise err
+                        if destination["et"] == "On time":
+                            arrival_time = rebuild_date(
+                                time_base, destination["st"]
+                            )
+                        else:
+                            arrival_time = rebuild_date(
+                                time_base, destination["et"]
+                            )
 
                 # if national rail returned us a train not heading
                 # to our destination
@@ -188,14 +173,15 @@ class NationalRailClient:
         return status
 
     async def async_get_data(self):
+        """Data resfresh function called by the coordinator"""
         try:
-            _LOGGER.debug(f"Requesting depearture data for {self.station}")
+            _LOGGER.debug("Requesting depearture data for %s", self.station)
             raw_data = await self.get_raw_departures()
         except Exception as err:
             _LOGGER.exception("Exception whilst fetching data: ")
             raise err
         try:
-            _LOGGER.debug(f"Procession station schedule for {self.station}")
+            _LOGGER.debug("Procession station schedule for %s", self.station)
             data = self.process_data(raw_data)
         except Exception as err:
             _LOGGER.exception("Exception whilst processing data: ")

@@ -34,6 +34,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class NationalRailScheduleCoordinator(DataUpdateCoordinator):
 
+    description: str = None
+    friendly_name: str = None
+    sensor_name: str = None
+
     def __init__(self, hass, token, station, destinations):
         """Initialize my coordinator."""
         super().__init__(
@@ -45,7 +49,10 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(minutes=REFRESH),
         )
         destinations = destinations.split(",")
+        self.station = station
+        self.destinations = destinations
         self.my_api = NationalRailClient(token, station, destinations)
+
 
     async def _async_update_data(self):
         """Fetch data from API endpoint.
@@ -57,9 +64,29 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
         # Note: asyncio.TimeoutError and aiohttp.ClientError are already
         # handled by the data update coordinator.
         async with async_timeout.timeout(30):
-            return await self.my_api.async_get_data()
+            data = await self.my_api.async_get_data()
         # except aiohttp.ClientError as err:
         #    raise UpdateFailed(f"Error communicating with API: {err}") from err
+
+        if self.sensor_name is None:
+            self.sensor_name = f"train_schedule_{self.station}{'_' + '_'.join(self.destinations) if len(self.destinations) >0 else ''}"
+
+        if self.description is None:
+            self.description = f"Departing trains schedule at {data['station']} station"
+
+        if self.friendly_name is None:
+            self.friendly_name = f"Train schedule at {data['station']} station"
+            if len(self.destinations) == 1:
+                self.friendly_name += f" for {self.destinations[0]}"
+            elif len(self.destinations) > 1:
+                self.friendly_name += f" for {'&'.join(self.destinations)}"
+
+
+        data["name"] = self.sensor_name
+        data["description"] = self.description
+        data["friendly_name"] = self.friendly_name
+
+        return data
 
 
 class NationalRailSchedule(CoordinatorEntity):
@@ -81,7 +108,6 @@ class NationalRailSchedule(CoordinatorEntity):
         self.entity_id = (
             f"sensor.{coordinator.data['name'].lower()}"
         )
-        # self.friendly_name = f"{self.coordinator.data[self.idx]['friendly_name']}"
 
     @property
     def extra_state_attributes(self):
@@ -91,11 +117,11 @@ class NationalRailSchedule(CoordinatorEntity):
     @property
     def unique_id(self) -> str | None:
         """Return a unique ID."""
-        return f"{self.coordinator.data['name']}"
+        return self.coordinator.data['name']
 
     @property
     def state(self):
         """Return the state of the sensor."""
-        _LOGGER.debug("updating state state of %s ", self.coordinator.data['name'])
+        _LOGGER.debug("updating state of %s ", self.coordinator.data['name'])
         # _LOGGER.debug(self.coordinator.data[self.idx])
         return self.coordinator.data["next_train"]
