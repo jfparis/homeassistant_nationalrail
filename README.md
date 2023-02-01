@@ -13,3 +13,10 @@ This allows you to have a schedule of the train at your station in your home ass
 # Integration within the UI
 
 TBD
+
+# Fair use policy
+
+National Rail limits API call to five million requests per four week railway period.
+An update every minute for a 4 week period would require 40,320 request. You could therefore have 124 those sensors.
+
+We are currently refreshing once every 10 minutes
