@@ -37,9 +37,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     #     your_validate_func, data["username"], data["password"]
     # )
 
-    #hub = PlaceholderHub(data["host"])
+    # hub = PlaceholderHub(data["host"])
 
-    #if not await hub.authenticate(data["username"], data["password"]):
+    # if not await hub.authenticate(data["username"], data["password"]):
     #    raise InvalidAuth
 
     # If you cannot connect:
