@@ -83,11 +83,6 @@ class NationalRailSchedule(CoordinatorEntity):
         )
         # self.friendly_name = f"{self.coordinator.data[self.idx]['friendly_name']}"
 
-    # @property
-    # def name(self):
-    #    """Return the name of the sensor."""
-    #    return f"{self.coordinator.data[self.idx]['friendly_name']}"
-
     @property
     def extra_state_attributes(self):
         """Return the state attributes."""
@@ -101,6 +96,6 @@ class NationalRailSchedule(CoordinatorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        _LOGGER.debug("sensor %s updating state", self.coordinator.data['name'])
+        _LOGGER.debug("updating state state of %s ", self.coordinator.data['name'])
         # _LOGGER.debug(self.coordinator.data[self.idx])
         return self.coordinator.data["next_train"]

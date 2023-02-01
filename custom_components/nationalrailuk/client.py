@@ -1,3 +1,4 @@
+"""Client for the National Rail API"""
 from datetime import datetime, timedelta
 import logging
 
@@ -46,6 +47,7 @@ class NationalRailClient:
 
         self.client = AsyncClient(wsdl=WSDL, settings=settings, plugins=[history])
 
+        # Prepackage the authorisation token
         header = xsd.Element(
             "{http://thalesgroup.com/RTTI/2013-11-28/Token/types}AccessToken",
             xsd.ComplexType(
@@ -66,7 +68,7 @@ class NationalRailClient:
                 numRows=10, crs=self.station, _soapheaders=[self.header_value]
             )
         else:
-            res = None
+            res = {}
             for each in self.destinations:
                 batch = await self.client.service.GetDepBoardWithDetails(
                     numRows=10,
@@ -75,7 +77,7 @@ class NationalRailClient:
                     filterType="to",
                     _soapheaders=[self.header_value],
                 )
-                if res is None:
+                if not res:
                     res = batch
                 else:
                     if res["trainServices"] is None:
@@ -89,35 +91,41 @@ class NationalRailClient:
         return res
 
     def process_data(self, json_message):
+        """Unpack the data return by the api in a usable format for hass"""
+
         status = {}
         status["trains"] = []
         origin_station = json_message["locationName"]
-        status["description"] = f"Departing train schedule at {origin_station}"
+        status["description"] = f"Departing trains schedule at {origin_station} station"
         status["name"] = f"train_schedule_{self.station}{'_' + '_'.join(self.destinations) if len(self.destinations) >0 else ''}"
-        status["friendly_name"] = f"{self.destinations} schedule at Mortlake"
+
+        status["friendly_name"] = f"Train schedule at {origin_station} station"
+        if len(self.destinations) == 1:
+            status["friendly_name"] += f" heading to {self.destinations[0]}"
+        elif len(self.destinations) > 1:
+            status["friendly_name"] += f" heading to {'&'.join(self.destinations)}"
+
         time_base = json_message["generatedAt"]
         if json_message["trainServices"] is None:
             status["next_train"] = None
             status["arrival_time"] = None
-            status["delay"] = None
+            status["terminus"] = None
+            status["delay"] = 0
             return status
+
         services_list = json_message["trainServices"]["service"]
         delays = []
         for service in services_list:
             train = {}
-            try:
-                time = rebuild_date(time_base, service["std"])
-            except BaseException as err:
-                time = None
-                raise err
-            try:
-                if service["etd"] == "On time":
-                    expected = time
-                else:
-                    expected = rebuild_date(time_base, service["etd"])
-            except BaseException as err:
-                expected = None
-                raise err
+
+            time = rebuild_date(time_base, service["std"])
+
+
+            if service["etd"] == "On time":
+                expected = time
+            else:
+                expected = rebuild_date(time_base, service["etd"])
+
             delay = (expected - time).total_seconds() / 60
             delays.append(delay)
             terminus = service["destination"]["location"][0]["locationName"]
@@ -157,8 +165,10 @@ class NationalRailClient:
                             _LOGGER.exception("Exception whilst fetching data: ")
                             raise err
 
-            if arrival_dest is None:
-                continue
+                # if national rail returned us a train not heading
+                # to our destination
+                if arrival_dest is None:
+                    continue
 
             train["scheduled"] = time
             train["expected"] = expected
@@ -172,6 +182,7 @@ class NationalRailClient:
         status["trains"] = sorted(status["trains"], key=lambda d: d["expected"])
         status["next_train"] = status["trains"][0]["expected"]
         status["arrival_time"] = status["trains"][0]["time_at_destination"]
+        status["terminus"] = status["trains"][0]["terminus"]
         status["delay"] = sum(delays) / len(delays)
 
         return status
