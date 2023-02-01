@@ -3,11 +3,24 @@ from datetime import datetime, timedelta
 import logging
 
 from zeep import AsyncClient, Settings, xsd
+from zeep.exceptions import Fault
 from zeep.plugins import HistoryPlugin
 
 from .const import WSDL
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class NationalRailClientException(Exception):
+    """Base exception class."""
+
+
+class NationalRailClientInvalidToken(NationalRailClientException):
+    """Token is Invalid"""
+
+
+class NationalRailClientInvalidInput(NationalRailClientException):
+    """Token is Invalid"""
 
 
 def rebuild_date(base, time):
@@ -179,13 +192,21 @@ class NationalRailClient:
         try:
             _LOGGER.debug("Requesting depearture data for %s", self.station)
             raw_data = await self.get_raw_departures()
-        except Exception as err:
+        except Fault as err:
             _LOGGER.exception("Exception whilst fetching data: ")
-            raise err
+            if err.message == "Unknown fault occured":
+                # likely invalid token
+                raise NationalRailClientInvalidToken("Invalid API token") from err
+            if err.message == "Unexpected server error":
+                # likely invalid input
+                raise NationalRailClientInvalidInput("Invalid station input") from err
+
+            raise NationalRailClientException("Unknown Error") from err
+
         try:
             _LOGGER.debug("Procession station schedule for %s", self.station)
             data = self.process_data(raw_data)
         except Exception as err:
             _LOGGER.exception("Exception whilst processing data: ")
-            raise err
+            raise NationalRailClientException("unexpected data from api") from err
         return data
