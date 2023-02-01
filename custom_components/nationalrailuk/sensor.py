@@ -1,8 +1,9 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
+import time
 
 import async_timeout
 
@@ -15,6 +16,7 @@ from .client import NationalRailClient
 from .const import CONF_DESTINATIONS, CONF_STATION, CONF_TOKEN, DOMAIN, REFRESH
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Config entry example."""
@@ -53,6 +55,7 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
         self.destinations = destinations
         self.my_api = NationalRailClient(token, station, destinations)
 
+        self.last_data_refresh = None
 
     async def _async_update_data(self):
         """Fetch data from API endpoint.
@@ -60,31 +63,49 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
         This is the place to pre-process the data to lookup tables
         so entities can quickly look up their data.
         """
-        # try:
-        # Note: asyncio.TimeoutError and aiohttp.ClientError are already
-        # handled by the data update coordinator.
-        async with async_timeout.timeout(30):
-            data = await self.my_api.async_get_data()
-        # except aiohttp.ClientError as err:
-        #    raise UpdateFailed(f"Error communicating with API: {err}") from err
+        # chek whether we should refresh the data of not
+        if (
+            self.last_data_refresh is None
+            or (
+                self.last_data_refresh is not None
+                and (time.time() - self.last_data_refresh) > 9.5 * 60
+            )
+            or (
+                len(self.data["trains"]) > 0
+                and datetime.now(self.data["trains"][0]["expected"].tzinfo)
+                >= self.data["trains"][0]["expected"] - timedelta(minutes=1)
+            )
+        ):
+            # try:
+            # Note: asyncio.TimeoutError and aiohttp.ClientError are already
+            # handled by the data update coordinator.
+            async with async_timeout.timeout(30):
+                data = await self.my_api.async_get_data()
+                self.last_data_refresh = time.time()
+            # except aiohttp.ClientError as err:
+            #    raise UpdateFailed(f"Error communicating with API: {err}") from err
 
-        if self.sensor_name is None:
-            self.sensor_name = f"train_schedule_{self.station}{'_' + '_'.join(self.destinations) if len(self.destinations) >0 else ''}"
+            if self.sensor_name is None:
+                self.sensor_name = f"train_schedule_{self.station}{'_' + '_'.join(self.destinations) if len(self.destinations) >0 else ''}"
 
-        if self.description is None:
-            self.description = f"Departing trains schedule at {data['station']} station"
+            if self.description is None:
+                self.description = (
+                    f"Departing trains schedule at {data['station']} station"
+                )
 
-        if self.friendly_name is None:
-            self.friendly_name = f"Train schedule at {data['station']} station"
-            if len(self.destinations) == 1:
-                self.friendly_name += f" for {self.destinations[0]}"
-            elif len(self.destinations) > 1:
-                self.friendly_name += f" for {'&'.join(self.destinations)}"
+            if self.friendly_name is None:
+                self.friendly_name = f"Train schedule at {data['station']} station"
+                if len(self.destinations) == 1:
+                    self.friendly_name += f" for {self.destinations[0]}"
+                elif len(self.destinations) > 1:
+                    self.friendly_name += f" for {'&'.join(self.destinations)}"
 
+            data["name"] = self.sensor_name
+            data["description"] = self.description
+            data["friendly_name"] = self.friendly_name
 
-        data["name"] = self.sensor_name
-        data["description"] = self.description
-        data["friendly_name"] = self.friendly_name
+        else:
+            data = self.data
 
         return data
 
@@ -105,9 +126,7 @@ class NationalRailSchedule(CoordinatorEntity):
     def __init__(self, coordinator):
         """Pass coordinator to CoordinatorEntity."""
         super().__init__(coordinator)
-        self.entity_id = (
-            f"sensor.{coordinator.data['name'].lower()}"
-        )
+        self.entity_id = f"sensor.{coordinator.data['name'].lower()}"
 
     @property
     def extra_state_attributes(self):
@@ -117,11 +136,9 @@ class NationalRailSchedule(CoordinatorEntity):
     @property
     def unique_id(self) -> str | None:
         """Return a unique ID."""
-        return self.coordinator.data['name']
+        return self.coordinator.data["name"]
 
     @property
     def state(self):
         """Return the state of the sensor."""
-        _LOGGER.debug("updating state of %s ", self.coordinator.data['name'])
-        # _LOGGER.debug(self.coordinator.data[self.idx])
         return self.coordinator.data["next_train"]
