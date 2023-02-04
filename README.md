@@ -70,9 +70,10 @@ I have not cracked the UI coding yet so I did my display with an HTMl template c
 
 ## Automation and notifications
 
-I created 3 zone. 
+I created 4 zone. 
 * Neighbourhood (includes my local station)
-* Waterloo
+* Weybridge station
+* Waterloo station
 * City (where I work)
 
 I want
@@ -80,139 +81,8 @@ I want
 * notification of delays in the morning on the WYB->WAT line if I am still around home 
 * notification of delays in the evwning on the WAT->WYB line if I am still around work 
 
-Here is my automation
-
-    alias: Train Alerts
-    description: ""
-    trigger:
-    - platform: time
-        at: "07:15:00"
-        id: morning
-    - platform: time
-        at: "17:30:00"
-        id: evening
-    - platform: state
-        entity_id:
-        - binary_sensor.template_train_perturbation_wyb_wat
-        to: "on"
-        id: train_to_city
-    - platform: state
-        entity_id:
-        - binary_sensor.template_train_perturbation_wat_wyb
-        to: "on"
-        id: train_to_home
-    - platform: zone
-        entity_id: person.jfparis
-        zone: zone.waterloo
-        event: enter
-        id: in_waterloo
-    condition: []
-    action:
-    - choose:
-        - conditions:
-            - condition: and
-                conditions:
-                - condition: or
-                    conditions:
-                    - condition: trigger
-                        id: morning
-                    - condition: trigger
-                        id: train_to_city
-                - condition: and
-                    conditions:
-                    - condition: time
-                        weekday:
-                        - mon
-                        - tue
-                        - wed
-                        - thu
-                        - fri
-                        after: "07:15:00"
-                        before: "09:30:00"
-                    - condition: zone
-                        entity_id: person.jfparis
-                        zone: zone.neighborhood
-                    - condition: state
-                        entity_id: binary_sensor.template_train_perturbation_wyb_wat
-                        state: "on"
-            sequence:
-            - service: notify.mobile_app_phone
-                data:
-                message: Train traffic is perturbated on the way to Waterloo
-                title: Train alert
-        - conditions:
-            - condition: and
-                conditions:
-                - condition: or
-                    conditions:
-                    - condition: trigger
-                        id: evening
-                    - condition: trigger
-                        id: train_to_home
-                - condition: and
-                    conditions:
-                    - condition: time
-                        weekday:
-                        - mon
-                        - tue
-                        - wed
-                        - thu
-                        - fri
-                        after: "17:30:00"
-                        before: "21:00:00"
-                    - condition: or
-                        conditions:
-                        - condition: zone
-                            entity_id: person.jfparis
-                            zone: zone.city
-                        - condition: zone
-                            entity_id: person.jfparis
-                            zone: zone.waterloo
-                - condition: and
-                    conditions:
-                    - condition: state
-                        entity_id: binary_sensor.template_train_perturbation_wat_wyb
-                        state: "on"
-            sequence:
-            - service: notify.mobile_app_phone
-                data:
-                title: Train alert
-                message: Train traffic is perturbated on the way to Weybridge
-        - conditions:
-            - condition: and
-                conditions:
-                - condition: trigger
-                    id: in_waterloo
-                - condition: time
-                    weekday:
-                    - mon
-                    - tue
-                    - wed
-                    - thu
-                    - fri
-                    after: "17:30:00"
-                    before: "21:00:00"
-                - condition: template
-                    value_template: >-
-                    {{state_attr('sensor.train_schedule_wat_wyb', 'platform') !=
-                    None }}
-            sequence:
-            - service: notify.mobile_app_phone
-                data:
-                title: Train alert
-                message: >-
-                    WYB Platform {{state_attr('sensor.train_schedule_wat_wyb',
-                    'platform') }} leaving {% if
-                    state_attr('sensor.train_schedule_wat_wyb',
-                    "next_train_expected") is not string  %}{{
-                    ((state_attr('sensor.train_schedule_wat_wyb',
-                    "next_train_expected") - now()).total_seconds() /60 )|
-                    round(0)}} min at
-                    {{as_timestamp(states('sensor.train_schedule_wat_wyb')) |
-                    timestamp_custom('%I:%M %p') }} {% else
-                    %}{{state_attr('sensor.train_schedule_wat_wyb',
-                    "next_train_expected")}}{% endif %}
-    mode: single
+A blueprint is included in the repository. Follow the docs 
+[here](https://www.home-assistant.io/docs/automation/using_blueprints/)
 
 
 # Fair use policy

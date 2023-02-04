@@ -1,0 +1,280 @@
+blueprint:
+  name: Commutter Train Notifications
+  description: >-
+    An automation that sends notifications based on the status of your commuter train
+  domain: automation
+  source_url: https://raw.githubusercontent.com/jfparis/homeassistant_nationalrail/master/blueprint/train_commuters_alerts.yaml
+  input:
+    morning_train:
+      name: Morning Train
+      description: Train status sensor provided by the nationalrailuk integration
+      selector:
+        entity:
+          domain: sensor
+          integration: nationalrailuk
+    morning_from_time:
+      name: Morning Alerts from
+      description: Time from which morning alrts should be sent
+      default: "07:15:00"
+      selector:
+        time:
+    morning_to_time:
+      name: Morning Alerts until
+      description: Time until which morning alrts should be sent
+      default: "09:30:00"
+      selector:
+        time:
+    evening_train:
+      name: Evening Train
+      description: Train status sensor provided by the nationalrailuk integration
+      selector:
+        entity:
+          domain: sensor
+          integration: nationalrailuk
+    evening_from_time:
+      name: Evening alerts from
+      description: Time from which evening alrts should be sent
+      default: "17:15:00"
+      selector:
+        time:
+    evening_to_time:
+      name: Evening alerts until
+      description: Time until which evening alrts should be sent
+      default: "21:30:00"
+      selector:
+        time:
+    home_neighbourhood_zone:
+      name: Home Neighbourhood
+      description: Zone into which you want to receive morning notification
+      selector:
+        entity:
+          domain: zone
+    work_neighbourhood_zone:
+      name: Work Neighbourhood
+      description: Zone into which you want to receive evening notification
+      selector:
+        entity:
+          domain: zone
+    morning_station_zone:
+      name: Morning station zone
+      description: Zone into which you want to receive morning platform notification
+      selector:
+        entity:
+          domain: zone
+    evening_station_zone:
+      name: Evening station zone
+      description: Zone into which you want to receive evening platform notification
+      selector:
+        entity:
+          domain: zone
+    commutting_day:
+      name: Day of the week to send the alerts
+      default: [mon, tue, wed, thu, fri]
+      selector:
+        select:
+          options:
+            - label: Monday
+              value: mon
+            - label: Tuesday
+              value: tue
+            - label: Wednesday
+              value: wed
+            - label: Thursday
+              value: thu
+            - label: Friday
+              value: fri
+            - label: Saturday
+              value: sat
+            - label: Sunday
+              value: sun
+          custom_value: false
+          multiple: true
+    morning_platform_notification:
+      name: Turn on morning platform notification
+      default: true
+      selector:
+        boolean:
+    evening_platform_notification:
+      name: Turn on evening platform notification
+      default: true
+      selector:
+        boolean:
+    commutter:
+      name: Person commutting
+      description: person commuting
+      selector:
+        entity:
+          domain: person
+    notify_device:
+      name: Device to notify
+      description: Device needs to run the official Home Assistant app to receive notifications.
+      default: false
+      selector:
+        device:
+          integration: mobile_app
+
+mode: single
+
+variables:
+  morning_train: !input morning_train
+  evening_train: !input evening_train
+  morning_platform_notification: !input morning_platform_notification
+  evening_platform_notification: !input evening_platform_notification
+
+trigger:
+  - platform: time
+    at: !input morning_from_time
+    id: morning
+  - platform: time
+    at: !input evening_from_time
+    id: evening
+  - platform: zone
+    entity_id: !input commutter
+    zone: !input evening_station_zone
+    event: enter
+    id: in_evening_station
+  - platform: zone
+    entity_id: !input commutter
+    zone: !input morning_station_zone
+    event: enter
+    id: in_morning_station
+  - platform: state
+    entity_id:
+      - !input morning_train
+    attribute: perturbations
+    id: train_to_city
+  - platform: state
+    entity_id:
+      - !input evening_train
+    attribute: perturbations
+    id: train_to_home
+condition: []
+action:
+  - choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: or
+                conditions:
+                  - condition: trigger
+                    id: morning
+                  - condition: trigger
+                    id: train_to_city
+              - condition: and
+                conditions:
+                  - condition: time
+                    weekday: !input commutting_day
+                    after: !input morning_from_time
+                    before: !input morning_to_time
+                  - condition: zone
+                    entity_id: !input commutter
+                    zone: !input home_neighbourhood_zone
+                  - condition: template
+                    value_template: >-
+                      {{state_attr(morning_train,
+                      'perturbations') == True}}
+        sequence:
+          - device_id: !input notify_device
+            domain: mobile_app
+            type: notify
+            message: Train traffic is perturbated on the way to {{state_attr(morning_train,'trains')[0].destination}}
+            title: Train alert
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: or
+                conditions:
+                  - condition: trigger
+                    id: evening
+                  - condition: trigger
+                    id: train_to_home
+              - condition: and
+                conditions:
+                  - condition: time
+                    weekday: !input commutting_day
+                    after: !input evening_from_time
+                    before: !input evening_to_time
+                  - condition: or
+                    conditions:
+                      - condition: zone
+                        entity_id: !input commutter
+                        zone: !input work_neighbourhood_zone
+                      - condition: zone
+                        entity_id: !input commutter
+                        zone: !input evening_station_zone
+                  - condition: template
+                    value_template: >-
+                      {{state_attr(evening_train,
+                      'perturbations') == True }}
+        sequence:
+          - device_id: !input notify_device
+            domain: mobile_app
+            type: notify
+            message: Train traffic is perturbated on the way to {{state_attr(evening_train,'trains')[0].destination}}
+            title: Train alert
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: in_evening_station
+              - condition: time
+                weekday: !input commutting_day
+                after: !input evening_from_time
+                before: !input evening_to_time
+              - condition: template
+                value_template: >-
+                  {{state_attr(evening_train, 'platform') !=
+                  None }}
+              - condition: template
+                value_template: "{{ evening_platform_notification }}"
+        sequence:
+          - device_id: !input notify_device
+            domain: mobile_app
+            type: notify
+            title: Train alert
+            message: >-
+              {{state_attr(evening_train,'trains')[0].terminus}} train to {{state_attr(evening_train,
+              'trains')[0].destination}} Platform {{state_attr(evening_train,
+              'platform') }} leaving {% if
+              state_attr(evening_train,
+              "next_train_expected") is not string  %}in {{
+              ((state_attr(evening_train,
+              "next_train_expected") - now()).total_seconds() /60 )|
+              round(0)}} min at
+              {{as_timestamp(states(evening_train)) |
+              timestamp_custom('%I:%M %p') }} {% else
+              %}{{state_attr(evening_train,
+              "next_train_expected")}}{% endif %}
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: in_morning_station
+              - condition: time
+                weekday: !input commutting_day
+                after: !input morning_from_time
+                before: !input morning_to_time
+              - condition: template
+                value_template: >-
+                  {{state_attr(morning_train, 'platform') !=
+                  None }}
+              - condition: template
+                value_template: "{{ morning_platform_notification }}"
+        sequence:
+          - device_id: !input notify_device
+            domain: mobile_app
+            type: notify
+            title: Train alert
+            message: >-
+              {{state_attr(morning_train,'trains')[0].terminus}} train to {{state_attr(morning_train,
+              'trains')[0].destination}} Platform {{state_attr(morning_train,
+              'platform') }} leaving {% if
+              state_attr(morning_train,
+              "next_train_expected") is not string  %}in {{
+              ((state_attr(morning_train,
+              "next_train_expected") - now()).total_seconds() /60 )|
+              round(0)}} min at
+              {{as_timestamp(states(morning_train)) |
+              timestamp_custom('%I:%M %p') }} {% else
+              %}{{state_attr(morning_train,
+              "next_train_expected")}}{% endif %}
