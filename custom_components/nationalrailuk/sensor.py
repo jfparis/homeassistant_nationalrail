@@ -1,12 +1,11 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 import logging
 import time
+from datetime import datetime, timedelta
 
 import async_timeout
-
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
@@ -68,7 +67,7 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             self.last_data_refresh is None
             or (
                 self.last_data_refresh is not None
-                and (time.time() - self.last_data_refresh) > 9.5 * 60
+                and (time.time() - self.last_data_refresh) > 14.5 * 60
             )
             or (
                 self.data["next_train_scheduled"] is not None

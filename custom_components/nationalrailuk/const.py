@@ -14,4 +14,4 @@ CONF_TOKEN = "api_token"
 CONF_STATION = "station"
 CONF_DESTINATIONS = "destinations"
 
-REFRESH = 1
+REFRESH = 2
