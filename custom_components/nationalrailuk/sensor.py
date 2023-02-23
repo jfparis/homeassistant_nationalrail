@@ -1,11 +1,12 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 import logging
 import time
-from datetime import datetime, timedelta
 
 import async_timeout
+
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
@@ -73,6 +74,7 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
                 self.data["next_train_scheduled"] is not None
                 and datetime.now(self.data["next_train_scheduled"].tzinfo)
                 >= self.data["next_train_scheduled"] - timedelta(minutes=1)
+                and not self.data["next_train_expected"] == "Cancelled"
             )
         ):
             # try:
