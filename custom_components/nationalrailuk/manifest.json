@@ -2,7 +2,7 @@
     "domain": "nationalrailuk",
     "name": "National Rail UK",
     "config_flow": true,
-    "documentation": "https://www.home-assistant.io/integrations/nationalrailuk",
+    "documentation": "https://github.com/jfparis/homeassistant_nationalrail",
     "requirements": ["zeep[async]"],
     "ssdp": [],
     "zeroconf": [],
