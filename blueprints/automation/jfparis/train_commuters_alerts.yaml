@@ -90,12 +90,32 @@ blueprint:
           custom_value: false
           multiple: true
     morning_platform_notification:
-      name: Turn on morning platform notification
+      name: Enable morning platform notifications to mobile device
       default: true
       selector:
         boolean:
     evening_platform_notification:
-      name: Turn on evening platform notification
+      name: Enable evening platform notifications to mobile device
+      default: true
+      selector:
+        boolean:
+    morning_delay_notification:
+      name: Enable morning delay notifications to mobile device
+      default: true
+      selector:
+        boolean:
+    evening_delay_notification:
+      name: Enable evening delay notifications to mobile device
+      default: true
+      selector:
+        boolean:
+    morning_html5_delay_notification:
+      name: Enable morning delay notification to desktop device
+      default: true
+      selector:
+        boolean:
+    evening_html5_delay_notification:
+      name: Enable evening delay notification to desktop device
       default: true
       selector:
         boolean:
@@ -112,14 +132,35 @@ blueprint:
       selector:
         device:
           integration: mobile_app
+    lovelace_url:
+      name: Lovelace page to open
+      description: Specify the url of a lovelace page to open when the user click on the notification
+      default: "/lovelace"
+      selector:
+        text:
+          type: url
+    html5_notify_service:
+      name: Name of the html5 notify target
+      description: Specify the html push notification target
+      default: "/lovelace"
+      selector:
+        text:
 
-mode: single
+mode: queued
+
+trace:
+  stored_traces: 50
 
 variables:
   morning_train: !input morning_train
   evening_train: !input evening_train
   morning_platform_notification: !input morning_platform_notification
   evening_platform_notification: !input evening_platform_notification
+  morning_delay_notification: !input morning_delay_notification
+  evening_delay_notification: !input evening_delay_notification
+  morning_html5_delay_notification: !input morning_html5_delay_notification
+  evening_html5_delay_notification: !input evening_html5_delay_notification
+  lovelace_url: !input lovelace_url
 
 trigger:
   - platform: time
@@ -148,90 +189,156 @@ trigger:
       - !input evening_train
     attribute: perturbations
     id: train_to_home
+  - platform: state
+    entity_id:
+      - !input evening_train
+    attribute: platform
+    id: evening_platform_change
+  - platform: state
+    entity_id:
+      - !input morning_train
+    attribute: platform
+    id: morning_platform_change
 condition: []
 action:
   - choose:
       - conditions:
           - condition: and
+            alias: "In the morning hours if the user is still in their neighbourhood"
             conditions:
+              - condition: template
+                value_template: "{{ morning_delay_notification }}"
               - condition: or
                 conditions:
                   - condition: trigger
                     id: morning
                   - condition: trigger
                     id: train_to_city
-              - condition: and
+              - condition: template
+                value_template: >-
+                  {{state_attr(morning_train,
+                  'perturbations') == True}}
+              - condition: time
+                weekday: !input commutting_day
+                after: !input morning_from_time
+                before: !input morning_to_time
+              - condition: or
                 conditions:
-                  - condition: time
-                    weekday: !input commutting_day
-                    after: !input morning_from_time
-                    before: !input morning_to_time
                   - condition: zone
                     entity_id: !input commutter
                     zone: !input home_neighbourhood_zone
-                  - condition: template
-                    value_template: >-
-                      {{state_attr(morning_train,
-                      'perturbations') == True}}
+                  - condition: zone
+                    entity_id: !input commutter
+                    zone: !input morning_station_zone
         sequence:
           - device_id: !input notify_device
             domain: mobile_app
             type: notify
             message: Train traffic is perturbated on the way to {{state_attr(morning_train,'trains')[0].destination}}
-            title: Train alert
+            title: National rail alert
+            data:
+              ttl: 0
+              priority: high
+              channel: nationalrailuk
+              importance: high
+              ledColor: blue
+              url: "{{lovelace_url}}"
+              clickAction: "{{lovelace_url}}"
+          - condition: template
+            value_template: "{{ morning_html5_delay_notification }}"
+          - service: notify.notify
+            data:
+              target: !input html5_notify_service
+              title: National rail alert
+              message: Train traffic is perturbated on the way to {{state_attr(morning_train,'trains')[0].destination}}
+              data:
+                url: "{{lovelace_url}}"
       - conditions:
           - condition: and
+            alias: "In the evening hours if the user is still in their work area"
             conditions:
+              - condition: template
+                value_template: "{{ evening_delay_notification }}"
               - condition: or
                 conditions:
                   - condition: trigger
                     id: evening
                   - condition: trigger
                     id: train_to_home
-              - condition: and
+              - condition: template
+                value_template: >-
+                  {{state_attr(evening_train,
+                  'perturbations') == True }}
+              - condition: time
+                weekday: !input commutting_day
+                after: !input evening_from_time
+                before: !input evening_to_time
+              - condition: or
                 conditions:
-                  - condition: time
-                    weekday: !input commutting_day
-                    after: !input evening_from_time
-                    before: !input evening_to_time
-                  - condition: or
-                    conditions:
-                      - condition: zone
-                        entity_id: !input commutter
-                        zone: !input work_neighbourhood_zone
-                      - condition: zone
-                        entity_id: !input commutter
-                        zone: !input evening_station_zone
-                  - condition: template
-                    value_template: >-
-                      {{state_attr(evening_train,
-                      'perturbations') == True }}
+                  - condition: zone
+                    entity_id: !input commutter
+                    zone: !input work_neighbourhood_zone
+                  - condition: zone
+                    entity_id: !input commutter
+                    zone: !input evening_station_zone
         sequence:
           - device_id: !input notify_device
             domain: mobile_app
             type: notify
             message: Train traffic is perturbated on the way to {{state_attr(evening_train,'trains')[0].destination}}
-            title: Train alert
+            title: National rail alert
+            data:
+              ttl: 0
+              priority: high
+              channel: nationalrailuk
+              importance: high
+              ledColor: blue
+              url: "{{lovelace_url}}"
+              clickAction: "{{lovelace_url}}"
+          - condition: template
+            value_template: "{{ evening_html5_delay_notification }}"
+          - service: notify.notify
+            data:
+              target: !input html5_notify_service
+              title: National rail alert
+              message: Train traffic is perturbated on the way to {{state_attr(evening_train,'trains')[0].destination}}
+              data:
+                url: "{{lovelace_url}}"
       - conditions:
           - condition: and
+            alias: "When a platform is announced in the evening station"
             conditions:
-              - condition: trigger
-                id: in_evening_station
+              - condition: template
+                value_template: "{{ evening_platform_notification }}"
               - condition: time
                 weekday: !input commutting_day
                 after: !input evening_from_time
                 before: !input evening_to_time
-              - condition: template
-                value_template: >-
-                  {{state_attr(evening_train, 'platform') !=
-                  None }}
-              - condition: template
-                value_template: "{{ evening_platform_notification }}"
+              - condition: or
+                conditions:
+                  - condition: and
+                    conditions:
+                      - condition: trigger
+                        id: in_evening_station
+                      - condition: template
+                        value_template: >-
+                          {{state_attr(evening_train, 'platform') !=
+                          None }}
+                  - condition: and
+                    conditions:
+                      - condition: zone
+                        entity_id: !input commutter
+                        zone: !input evening_station_zone
+                      - condition: trigger
+                        id: evening_platform_change
+                      - condition: template
+                        value_template: >-
+                          {{trigger.from_state.attributes['platform'] == None and trigger.to_state.attributes['platform'] != None }}
         sequence:
           - device_id: !input notify_device
             domain: mobile_app
             type: notify
-            title: Train alert
+            title: National rail alert
             message: >-
               {{state_attr(evening_train,'trains')[0].terminus}} train to {{state_attr(evening_train,
               'trains')[0].destination}} Platform {{state_attr(evening_train,
@@ -245,26 +352,49 @@ action:
               timestamp_custom('%I:%M %p') }} {% else
               %}{{state_attr(evening_train,
               "next_train_expected")}}{% endif %}
+            data:
+              ttl: 0
+              priority: high
+              channel: nationalrailuk
+              importance: high
+              ledColor: blue
+              url: "{{lovelace_url}}"
+              clickAction: "{{lovelace_url}}"
       - conditions:
           - condition: and
+            alias: "When a platform is announced in the morning station"
             conditions:
-              - condition: trigger
-                id: in_morning_station
+              - condition: template
+                value_template: "{{ morning_platform_notification }}"
               - condition: time
                 weekday: !input commutting_day
                 after: !input morning_from_time
                 before: !input morning_to_time
-              - condition: template
-                value_template: >-
-                  {{state_attr(morning_train, 'platform') !=
-                  None }}
-              - condition: template
-                value_template: "{{ morning_platform_notification }}"
+              - condition: or
+                conditions:
+                  - condition: and
+                    conditions:
+                      - condition: trigger
+                        id: in_morning_station
+                      - condition: template
+                        value_template: >-
+                          {{state_attr(morning_train, 'platform') !=
+                          None }}
+                  - condition: and
+                    conditions:
+                      - condition: zone
+                        entity_id: !input commutter
+                        zone: !input morning_station_zone
+                      - condition: trigger
+                        id: morning_platform_change
+                      - condition: template
+                        value_template: >-
+                          {{trigger.from_state.attributes['platform'] == None and trigger.to_state.attributes['platform'] != None }}
         sequence:
           - device_id: !input notify_device
             domain: mobile_app
             type: notify
-            title: Train alert
+            title: National rail alert
             message: >-
               {{state_attr(morning_train,'trains')[0].terminus}} train to {{state_attr(morning_train,
               'trains')[0].destination}} Platform {{state_attr(morning_train,
@@ -278,3 +408,11 @@ action:
               timestamp_custom('%I:%M %p') }} {% else
               %}{{state_attr(morning_train,
               "next_train_expected")}}{% endif %}
+            data:
+              ttl: 0
+              priority: high
+              channel: nationalrailuk
+              importance: high
+              ledColor: blue
+              url: "{{lovelace_url}}"
+              clickAction: "{{lovelace_url}}"
