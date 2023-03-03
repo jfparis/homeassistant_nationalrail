@@ -208,5 +208,6 @@ class NationalRailClient:
             data = self.process_data(raw_data)
         except Exception as err:
             _LOGGER.exception("Exception whilst processing data: ")
+            _LOGGER.debug("Raw data %s dump", raw_data)
             raise NationalRailClientException("unexpected data from api") from err
         return data
