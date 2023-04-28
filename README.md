@@ -3,7 +3,7 @@
 This is an integration for the national rail API into home assistant.
 This allows you to have a schedule of the train at your station in your home assistant.
 
-# Instalation
+# Installation
 
 1. Register with national rail to get an api token [here](http://realtime.nationalrail.co.uk/OpenLDBWSRegistration/)
 2. Copy the custom_components/nationalrailuk folder into your config/custom_components folder and restart home assistant
