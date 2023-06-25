@@ -24,7 +24,7 @@ class NationalRailClientInvalidInput(NationalRailClientException):
 
 
 def rebuild_date(base, time):
-    """Rebuild a date time object from the implified representation returned by the api"""
+    """Rebuild a date time object from the simplified representation returned by the api"""
     time = time.split(":")
     hour = int(time[0])
     minute = int(time[1])
@@ -115,7 +115,13 @@ class NationalRailClient:
             return status
 
         services_list = json_message["trainServices"]["service"]
-        for service in services_list:
+        serviceIDs = [x['serviceID'] for x in services_list]
+
+        for i, service in enumerate(services_list):
+            # Skip trains that we have seen already
+            if serviceIDs.index(service['serviceID']) != i:
+                continue
+
             train = {}
             perturbation = False
 
@@ -141,38 +147,38 @@ class NationalRailClient:
             # arrival_time = None
             # arrival_dest = None
 
-            destination = None
+            destination = []
             if len(self.destinations) == 0:
                 destination = destinations_list[-1]
             else:
                 for each in destinations_list:
                     if each["crs"] in self.destinations:
-                        destination = each
-                        break
+                        destination.append(each)
 
             # if national rail returned us a train not heading
             # to our destination
             if destination is None:
                 continue
 
-            arrival_dest = destination["locationName"]
-            expected_arrival = rebuild_date(time_base, destination["st"])
-            if destination["et"] == "On time":
-                arrival_time = expected_arrival
-            elif destination["et"] == "Delayed" or destination["et"] == "Cancelled":
-                arrival_time = destination["et"]
-                perturbation = True
-            else:
-                arrival_time = rebuild_date(time_base, destination["et"])
-                delay = (arrival_time - expected_arrival).total_seconds() / 60
-                if delay > 9:
+            arrival_dest = []
+            for dest in destination:
+                expected_arrival = rebuild_date(time_base, dest["st"])
+                if dest["et"] == "On time":
+                    arrival_time = expected_arrival
+                elif dest["et"] == "Delayed" or dest["et"] == "Cancelled":
+                    arrival_time = dest["et"]
                     perturbation = True
+                else:
+                    arrival_time = rebuild_date(time_base, dest["et"])
+                    delay = (arrival_time - expected_arrival).total_seconds() / 60
+                    if delay > 9 and not perturbation:
+                        perturbation = True
+                arrival_dest.append({'name': dest["locationName"], 'time_at_destination' : arrival_time})
 
             train["scheduled"] = time
             train["expected"] = expected
             train["terminus"] = terminus
-            train["destination"] = arrival_dest
-            train["time_at_destination"] = arrival_time
+            train["destinations"] = arrival_dest
             train["platform"] = service["platform"]
             train["perturbation"] = perturbation
 

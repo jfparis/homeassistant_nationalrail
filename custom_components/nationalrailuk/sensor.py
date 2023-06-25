@@ -105,9 +105,12 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             data["description"] = self.description
             data["friendly_name"] = self.friendly_name
 
+            
+
+            # TODO: should have separate `next_train`s for each destination monitored
             data["next_train_scheduled"] = None
             data["next_train_expected"] = None
-            data["arrival_time"] = None
+            data["destinations"] = None
             data["terminus"] = None
             data["platform"] = None
             data["perturbations"] = False
@@ -119,14 +122,15 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
                         and each["expected"] == "Cancelled"
                     )
                     or (
-                        isinstance(each["time_at_destination"], str)
-                        and each["time_at_destination"] == "Cancelled"
+                        len(each["destinations"]) > 0 and
+                        isinstance(each["destinations"][0]["time_at_destination"], str)
+                        and each["destinations"][0]["time_at_destination"] == "Cancelled"
                     )
                 ):
 
                     data["next_train_scheduled"] = each["scheduled"]
                     data["next_train_expected"] = each["expected"]
-                    data["arrival_time"] = each["time_at_destination"]
+                    data["destinations"] = each["destinations"]
                     data["terminus"] = each["terminus"]
                     data["platform"] = each["platform"]
 
