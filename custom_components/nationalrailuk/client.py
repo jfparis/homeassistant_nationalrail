@@ -1,6 +1,6 @@
 """Client for the National Rail API"""
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 
 from zeep import AsyncClient, Settings, xsd
 from zeep.exceptions import Fault
