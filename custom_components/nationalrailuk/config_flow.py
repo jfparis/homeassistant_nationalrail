@@ -24,7 +24,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_TOKEN): str,
         vol.Required(CONF_STATION): str,
-        vol.Required(CONF_DESTINATIONS): str,
+        vol.Optional(CONF_DESTINATIONS): str,
     }
 )
 

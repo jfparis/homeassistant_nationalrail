@@ -13,7 +13,7 @@ This allows you to have a schedule of the train at your station in your home ass
 
 # Integration within the UI
 
-## Disrubption Sensor
+## Disruption Sensor
 
 You might want to create a binary sensor to be alerted of disruptions
 
@@ -31,42 +31,43 @@ You might want to create a binary sensor to be alerted of disruptions
 
 ## Departing board display
 
-I have not cracked the UI coding yet so I did my display with an HTMl template card
+I have not cracked the UI coding yet so I did my display with an [HTML template card](https://github.com/PiotrMachowski/Home-Assistant-Lovelace-HTML-Jinja2-Template-card).
 
     type: custom:html-template-card
     title: WYB - WAT timetable
     ignore_line_breaks: true
     content: >
-    <style> table {    width: 100%;   }  tr:nth-child(even) {    
-    background-color: #222222;   }  td, th {     text-align: left;   }  td.dest
-    {padding-left: 1em;}
-
-    </style>     <table>  <thead> <tr> <th>Destination</th> <th>Sch'd</th>
-    <th>Expt'd</th> <th>Platform</th> </tr></thead> <tbody>
-        {% for train in states.sensor.train_schedule_wyb_wat.attributes.trains -%}  <tr>
-        <td> {{ train.terminus }} </td>
-        <td> {{ as_timestamp(train.scheduled) | timestamp_custom('%I:%M %p') }} </td>
-        <td> {% if train.expected is not string %}
-        {{ as_timestamp(train.expected) | timestamp_custom('%I:%M %p') }} {% else
-        %}{{ train.expected }}{%
-        endif %}
-        </td>
-        <td> {{ train.platform }} </td>
-        </tr> <tr>
-        <td class="dest"> {{ train.destination }} </td>
-        <td> &nbsp; </td>    
-        <td> {% if train.time_at_destination is not string %}
-        {{ as_timestamp(train.time_at_destination) | timestamp_custom('%I:%M %p') }} {% else
-        %}{{ train.time_at_destination }}{%
-        endif %}
-        </td>
-        <td> &nbsp; </td>
-        </tr> {%- endfor %}   
-            {% if (states.sensor.train_schedule_mtl_wat.attributes.trains | length) ==0 -%}
+        <style> table {width: 100%;}  tr:nth-child(even) { background-color: #222222;}  td, th {text-align: left;} td.dest {padding-left: 1em;}
+        </style> 
+        <table>  
+        <thead> <tr> <th>Destination</th> <th>Sch'd</th> <th>Expt'd</th>
+        <th>Platform</th> </tr></thead> 
+        {% if states.sensor.train_schedule_wyb_wat and (states.sensor.train_schedule_wyb_wat.attributes.trains | length) > 0 -%}
+        <tbody>
+        {% for train in states.sensor.train_schedule_wyb_wat.attributes.trains %}<tr>
+            <td>{{ train.terminus }}</td>
+            <td>{{ as_timestamp(train.scheduled) | timestamp_custom('%I:%M %p') }}</td>
+            <td>{% if train.expected is not string -%}
+            {{ as_timestamp(train.expected) | timestamp_custom('%I:%M %p') }}
+            {%- else -%}{{ train.expected -}}
+            {% endif %}</td>
+            <td>{{ train.platform }}</td>
+        </tr>
+        {% for dest in train.destinations -%}  <tr>
+            <td class="dest">{{ dest.name }}</td>
+            <td>&nbsp;</td>    
+            <td>{% if dest.time_at_destination is not string -%}
+            {{ as_timestamp(dest.time_at_destination) | timestamp_custom('%I:%M %p') }} 
+            {%- else -%}{{ dest.time_at_destination -}}
+            {% endif %}</td><td></td>
+        </tr> 
+        {% endfor -%}
+        {%- endfor -%}   
+        {%- else -%}
         <tr><td>No Trains</td></tr>
         {%- endif -%}
-
         </tbody> </table> 
+
 
 ## Automation and notifications
 
