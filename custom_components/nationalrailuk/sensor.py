@@ -25,7 +25,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     station = entry.data.get(CONF_STATION)
     destinations = entry.data.get(CONF_DESTINATIONS)
 
-    _LOGGER.debug(f"Setting up sensor for {station} to {destinations}")
+    _LOGGER.info(f"Setting up sensor for {station} to {destinations}")
 
     coordinator = NationalRailScheduleCoordinator(hass, token, station, destinations)
 
@@ -105,7 +105,7 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             data["description"] = self.description
             data["friendly_name"] = self.friendly_name
 
-            
+
 
             # TODO: should have separate `next_train`s for each destination monitored
             data["next_train_scheduled"] = None

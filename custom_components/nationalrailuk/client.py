@@ -95,7 +95,9 @@ class NationalRailClient:
                 else:
                     if res["trainServices"] is None:
                         res["trainServices"] = batch["trainServices"]
-                    else:
+                    elif batch["trainServices"] is not None and \
+                        "service" in batch["trainServices"] and \
+                        "service" in res["trainServices"]:
                         res["trainServices"]["service"] = (
                             res["trainServices"]["service"]
                             + batch["trainServices"]["service"]
@@ -196,7 +198,7 @@ class NationalRailClient:
     async def async_get_data(self):
         """Data resfresh function called by the coordinator"""
         try:
-            _LOGGER.debug("Requesting depearture data for %s", self.station)
+            _LOGGER.info("Requesting depearture data for %s", self.station)
             raw_data = await self.get_raw_departures()
         except Fault as err:
             _LOGGER.exception("Exception whilst fetching data: ")
@@ -210,7 +212,7 @@ class NationalRailClient:
             raise NationalRailClientException("Unknown Error") from err
 
         try:
-            _LOGGER.debug("Procession station schedule for %s", self.station)
+            _LOGGER.info("Procession station schedule for %s", self.station)
             data = self.process_data(raw_data)
         except Exception as err:
             _LOGGER.exception("Exception whilst processing data: ")
