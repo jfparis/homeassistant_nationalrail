@@ -35,7 +35,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class NationalRailScheduleCoordinator(DataUpdateCoordinator):
-
     description: str = None
     friendly_name: str = None
     sensor_name: str = None
@@ -105,8 +104,6 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             data["description"] = self.description
             data["friendly_name"] = self.friendly_name
 
-
-
             # TODO: should have separate `next_train`s for each destination monitored
             data["next_train_scheduled"] = None
             data["next_train_expected"] = None
@@ -122,12 +119,14 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
                         and each["expected"] == "Cancelled"
                     )
                     or (
-                        len(each["destinations"]) > 0 and
-                        isinstance(each["destinations"][0]["time_at_destination"], str)
-                        and each["destinations"][0]["time_at_destination"] == "Cancelled"
+                        len(each["destinations"]) > 0
+                        and isinstance(
+                            each["destinations"][0]["time_at_destination"], str
+                        )
+                        and each["destinations"][0]["time_at_destination"]
+                        == "Cancelled"
                     )
                 ):
-
                     data["next_train_scheduled"] = each["scheduled"]
                     data["next_train_expected"] = each["expected"]
                     data["destinations"] = each["destinations"]

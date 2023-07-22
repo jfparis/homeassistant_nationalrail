@@ -95,9 +95,11 @@ class NationalRailClient:
                 else:
                     if res["trainServices"] is None:
                         res["trainServices"] = batch["trainServices"]
-                    elif batch["trainServices"] is not None and \
-                        "service" in batch["trainServices"] and \
-                        "service" in res["trainServices"]:
+                    elif (
+                        batch["trainServices"] is not None
+                        and "service" in batch["trainServices"]
+                        and "service" in res["trainServices"]
+                    ):
                         res["trainServices"]["service"] = (
                             res["trainServices"]["service"]
                             + batch["trainServices"]["service"]
@@ -117,11 +119,11 @@ class NationalRailClient:
             return status
 
         services_list = json_message["trainServices"]["service"]
-        serviceIDs = [x['serviceID'] for x in services_list]
+        serviceIDs = [x["serviceID"] for x in services_list]
 
         for i, service in enumerate(services_list):
             # Skip trains that we have seen already
-            if serviceIDs.index(service['serviceID']) != i:
+            if serviceIDs.index(service["serviceID"]) != i:
                 continue
 
             train = {}
@@ -175,7 +177,9 @@ class NationalRailClient:
                     delay = (arrival_time - expected_arrival).total_seconds() / 60
                     if delay > 9 and not perturbation:
                         perturbation = True
-                arrival_dest.append({'name': dest["locationName"], 'time_at_destination' : arrival_time})
+                arrival_dest.append(
+                    {"name": dest["locationName"], "time_at_destination": arrival_time}
+                )
 
             train["scheduled"] = time
             train["expected"] = expected

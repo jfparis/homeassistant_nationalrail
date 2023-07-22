@@ -48,7 +48,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # validate station input
 
     try:
-        my_api = NationalRailClient(data[CONF_TOKEN], data[CONF_STATION], data[CONF_DESTINATIONS].split(","))
+        my_api = NationalRailClient(
+            data[CONF_TOKEN], data[CONF_STATION], data[CONF_DESTINATIONS].split(",")
+        )
         res = await my_api.async_get_data()
     except NationalRailClientInvalidInput as err:
         _LOGGER.exception(err)
@@ -77,9 +79,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
 
-
         user_input[CONF_STATION] = user_input[CONF_STATION].strip().upper()
-        user_input[CONF_DESTINATIONS] = user_input[CONF_DESTINATIONS].strip().replace(" ","").upper()
+        user_input[CONF_DESTINATIONS] = (
+            user_input[CONF_DESTINATIONS].strip().replace(" ", "").upper()
+        )
 
         errors = {}
 
