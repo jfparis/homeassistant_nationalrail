@@ -234,7 +234,7 @@ action:
           - device_id: !input notify_device
             domain: mobile_app
             type: notify
-            message: Train traffic is perturbated on the way to {{state_attr(morning_train,'trains')[0].destination}}
+            message: Train traffic is perturbated on the way to {{state_attr(morning_train,'trains')[0].destinations[0].name}}
             title: National rail alert
             data:
               ttl: 0
@@ -250,7 +250,7 @@ action:
             data:
               target: !input html5_notify_service
               title: National rail alert
-              message: Train traffic is perturbated on the way to {{state_attr(morning_train,'trains')[0].destination}}
+              message: Train traffic is perturbated on the way to {{state_attr(morning_train,'trains')[0].destinations[0].name}}
               data:
                 url: "{{lovelace_url}}"
       - conditions:
@@ -285,7 +285,7 @@ action:
           - device_id: !input notify_device
             domain: mobile_app
             type: notify
-            message: Train traffic is perturbated on the way to {{state_attr(evening_train,'trains')[0].destination}}
+            message: Train traffic is perturbated on the way to {{state_attr(evening_train,'trains')[0].destinations[0].name}}
             title: National rail alert
             data:
               ttl: 0
@@ -301,7 +301,7 @@ action:
             data:
               target: !input html5_notify_service
               title: National rail alert
-              message: Train traffic is perturbated on the way to {{state_attr(evening_train,'trains')[0].destination}}
+              message: Train traffic is perturbated on the way to {{state_attr(evening_train,'trains')[0].destinations[0].name}}
               data:
                 url: "{{lovelace_url}}"
       - conditions:
@@ -341,7 +341,7 @@ action:
             title: National rail alert
             message: >-
               {{state_attr(evening_train,'trains')[0].terminus}} train to {{state_attr(evening_train,
-              'trains')[0].destination}} Platform {{state_attr(evening_train,
+              'trains')[0].destinations[0].name}} Platform {{state_attr(evening_train,
               'platform') }} leaving {% if
               state_attr(evening_train,
               "next_train_expected") is not string  %}in {{
@@ -397,7 +397,7 @@ action:
             title: National rail alert
             message: >-
               {{state_attr(morning_train,'trains')[0].terminus}} train to {{state_attr(morning_train,
-              'trains')[0].destination}} Platform {{state_attr(morning_train,
+              'trains')[0].destinations[0].name}} Platform {{state_attr(morning_train,
               'platform') }} leaving {% if
               state_attr(morning_train,
               "next_train_expected") is not string  %}in {{
