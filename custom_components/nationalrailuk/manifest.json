@@ -3,7 +3,7 @@
     "name": "National Rail UK",
     "config_flow": true,
     "documentation": "https://github.com/jfparis/homeassistant_nationalrail",
-    "requirements": ["zeep[async]"],
+    "requirements": ["zeep[async]==4.2.1"],
     "ssdp": [],
     "zeroconf": [],
     "homekit": {},

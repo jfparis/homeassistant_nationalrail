@@ -7,7 +7,7 @@ DOMAIN_DATA = f"{DOMAIN}_data"
 SENSOR = "sensor"
 PLATFORMS = [SENSOR]
 
-WSDL = "http://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2021-11-01"
+WSDL = "https://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2021-11-01"
 
 
 CONF_TOKEN = "api_token"
