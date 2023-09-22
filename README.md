@@ -93,6 +93,11 @@ An update every minute for a 4 week period would require 40,320 request. You cou
 
 We are currently refreshing once every 10 minutes
 
+# Support / Questions
+
+Please raise questions in the thread on the 
+[home assistant forum](https://community.home-assistant.io/t/national-rail-integration/529940/18)
+
 # Todo
 
 * Proper UI
