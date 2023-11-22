@@ -1,9 +1,9 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 import logging
 import time
+from datetime import datetime, timedelta
 
 import async_timeout
 
@@ -13,7 +13,15 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .client import NationalRailClient
-from .const import CONF_DESTINATIONS, CONF_STATION, CONF_TOKEN, DOMAIN, REFRESH
+from .const import (
+    CONF_DESTINATIONS,
+    CONF_STATION,
+    CONF_TOKEN,
+    DOMAIN,
+    HIGH_FREQUENCY_REFRESH,
+    POLLING_INTERVALE,
+    REFRESH,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,12 +75,13 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             self.last_data_refresh is None
             or (
                 self.last_data_refresh is not None
-                and (time.time() - self.last_data_refresh) > 14.5 * 60
+                and (time.time() - self.last_data_refresh) > POLLING_INTERVALE * 60
             )
             or (
                 self.data["next_train_scheduled"] is not None
                 and datetime.now(self.data["next_train_scheduled"].tzinfo)
-                >= self.data["next_train_scheduled"] - timedelta(minutes=1)
+                >= self.data["next_train_scheduled"]
+                - timedelta(minutes=HIGH_FREQUENCY_REFRESH)
                 and not self.data["next_train_expected"] == "Cancelled"
             )
         ):
