@@ -161,7 +161,7 @@ class NationalRailClient:
 
             # if national rail returned us a train not heading
             # to our destination
-            if destination is None:
+            if not destination:
                 continue
 
             arrival_dest = []
@@ -215,11 +215,12 @@ class NationalRailClient:
 
             raise NationalRailClientException("Unknown Error") from err
 
+        _LOGGER.debug("Raw data:\n%s", raw_data)
+
         try:
             _LOGGER.info("Procession station schedule for %s", self.station)
             data = self.process_data(raw_data)
         except Exception as err:
             _LOGGER.exception("Exception whilst processing data: ")
-            _LOGGER.debug("Raw data %s dump", raw_data)
             raise NationalRailClientException("unexpected data from api") from err
         return data
