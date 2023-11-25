@@ -91,7 +91,7 @@ A blueprint is included in the repository. Follow the docs
 National Rail limits API call to five million requests per four week railway period.
 An update every minute for a 4 week period would require 40,320 request. You could therefore have 124 those sensors.
 
-We are currently refreshing once every 10 minutes
+We are currently refreshing once every 15 minutes in normal conditions but starts updating every minutes if we are within 5 minutes of the planned departure time or if the train is delayed
 
 # Support / Questions
 
