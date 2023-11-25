@@ -15,7 +15,7 @@ CONF_STATION = "station"
 CONF_DESTINATIONS = "destinations"
 
 # Refresh frequency for the sensor
-REFRESH = 2
+REFRESH = 1
 
 # Polling interval (in minutes)
 POLLING_INTERVALE = 14.5
