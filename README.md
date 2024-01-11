@@ -101,6 +101,5 @@ Please raise questions in the thread on the
 # Todo
 
 * Proper UI
-* Enable via HACS
 * clean up and port into core
 * tests
