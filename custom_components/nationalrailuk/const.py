@@ -18,7 +18,7 @@ CONF_DESTINATIONS = "destinations"
 REFRESH = 1
 
 # Polling interval (in minutes)
-POLLING_INTERVALE = 14.5
+POLLING_INTERVALE = 10
 
 # Increase polling frequency if withing X minutes of next departure or if train is late
-HIGH_FREQUENCY_REFRESH = 5
+HIGH_FREQUENCY_REFRESH = 7
