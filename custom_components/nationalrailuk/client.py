@@ -189,6 +189,7 @@ class NationalRailClient:
             train["destinations"] = arrival_dest
             train["platform"] = service["platform"]
             train["perturbation"] = perturbation
+            train["operator"] = operator
 
             status["trains"].append(train)
 
