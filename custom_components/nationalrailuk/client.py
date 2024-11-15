@@ -147,6 +147,8 @@ class NationalRailClient:
             destinations_list = service["subsequentCallingPoints"]["callingPointList"][
                 0
             ]["callingPoint"]
+            
+            operator=service["operator"]
 
             # arrival_time = None
             # arrival_dest = None
