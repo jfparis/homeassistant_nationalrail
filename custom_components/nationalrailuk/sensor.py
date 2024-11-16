@@ -1,4 +1,5 @@
 """Platform for sensor integration."""
+
 from __future__ import annotations
 
 import logging
@@ -43,6 +44,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class NationalRailScheduleCoordinator(DataUpdateCoordinator):
+    """National Rail"""
+
     description: str = None
     friendly_name: str = None
     sensor_name: str = None
@@ -77,13 +80,13 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
                 self.last_data_refresh is not None
                 and (time.time() - self.last_data_refresh) > POLLING_INTERVALE * 60
             )
-            or (
-                self.data["next_train_scheduled"] is not None
-                and datetime.now(self.data["next_train_scheduled"].tzinfo)
-                >= self.data["next_train_scheduled"]
-                - timedelta(minutes=HIGH_FREQUENCY_REFRESH)
-                and not self.data["next_train_expected"] == "Cancelled"
-            )
+            # or (
+            #     self.data["next_train_scheduled"] is not None
+            #     and datetime.now(self.data["next_train_scheduled"].tzinfo)
+            #     >= self.data["next_train_scheduled"]
+            #     - timedelta(minutes=HIGH_FREQUENCY_REFRESH)
+            #     and not self.data["next_train_expected"] == "Cancelled"
+            # )
         ):
             # try:
             # Note: asyncio.TimeoutError and aiohttp.ClientError are already
@@ -99,7 +102,7 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
 
             if self.description is None:
                 self.description = (
-                    f"Departing trains schedule at {data['station']} station"
+                    f"Departing/Arriving trains schedule at {data['station']} station"
                 )
 
             if self.friendly_name is None:
@@ -114,35 +117,35 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
             data["friendly_name"] = self.friendly_name
 
             # TODO: should have separate `next_train`s for each destination monitored
-            data["next_train_scheduled"] = None
-            data["next_train_expected"] = None
-            data["destinations"] = None
-            data["terminus"] = None
-            data["platform"] = None
-            data["perturbations"] = False
+            # data["next_train_scheduled"] = None
+            # data["next_train_expected"] = None
+            # data["destinations"] = None
+            # data["terminus"] = None
+            # data["platform"] = None
+            # data["perturbations"] = False
 
-            for each in data["trains"]:
-                if data["next_train_scheduled"] is None and not (
-                    (
-                        isinstance(each["expected"], str)
-                        and each["expected"] == "Cancelled"
-                    )
-                    or (
-                        len(each["destinations"]) > 0
-                        and isinstance(
-                            each["destinations"][0]["time_at_destination"], str
-                        )
-                        and each["destinations"][0]["time_at_destination"]
-                        == "Cancelled"
-                    )
-                ):
-                    data["next_train_scheduled"] = each["scheduled"]
-                    data["next_train_expected"] = each["expected"]
-                    data["destinations"] = each["destinations"]
-                    data["terminus"] = each["terminus"]
-                    data["platform"] = each["platform"]
+            # for each in data["trains"]:
+            #     if data["next_train_scheduled"] is None and not (
+            #         (
+            #             isinstance(each["expected"], str)
+            #             and each["expected"] == "Cancelled"
+            #         )
+            #         or (
+            #             len(each["destinations"]) > 0
+            #             and isinstance(
+            #                 each["destinations"][0]["time_at_destination"], str
+            #             )
+            #             and each["destinations"][0]["time_at_destination"]
+            #             == "Cancelled"
+            #         )
+            #     ):
+            #         data["next_train_scheduled"] = each["scheduled"]
+            #         data["next_train_expected"] = each["expected"]
+            #         data["destinations"] = each["destinations"]
+            #         data["terminus"] = each["terminus"]
+            #         data["platform"] = each["platform"]
 
-                data["perturbations"] = data["perturbations"] or each["perturbation"]
+            #     data["perturbations"] = data["perturbations"] or each["perturbation"]
 
         else:
             data = self.data
@@ -181,4 +184,6 @@ class NationalRailSchedule(CoordinatorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        return self.coordinator.data["next_train_expected"]
+        return (
+            self.coordinator.last_data_refresh
+        )  # self.coordinator.data["next_train_expected"]
