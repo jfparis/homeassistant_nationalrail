@@ -145,6 +145,8 @@ class NationalRailClient:
             elif estimated in ("Delayed", "Cancelled"):
                 time_est = estimated
                 perturbation = True
+            elif estimated == "No report":
+                time_est = rebuild_date(time_base, "00:00")
             else:
                 time_est = rebuild_date(time_base, estimated)
                 delay = (time_est - time_shed).total_seconds() / 60
@@ -158,6 +160,8 @@ class NationalRailClient:
             elif actual in ("Delayed", "Cancelled"):
                 time_act = actual
                 perturbation = True
+            elif actual == "No report":
+                time_est = rebuild_date(time_base, "00:00")
             else:
                 time_act = rebuild_date(time_base, actual)
                 delay = (time_act - time_shed).total_seconds() / 60
@@ -179,7 +183,8 @@ class NationalRailClient:
         res = {}
 
         for each in self.destinations:
-            res[each] = {}
+            res["dests"] = {}
+            res["dests"][each] = {}
 
             res["station"] = json_message_in[each]["locationName"]
             time_base = json_message_in[each]["generatedAt"]
@@ -338,7 +343,10 @@ class NationalRailClient:
                     if isinstance(d["expected"], datetime)
                     else d["scheduled"],
                 )
-                res[each][ft["displayName"]] = status
+                res["dests"][each][ft["displayName"]] = status
+                res["dests"][each]["displayName"] = status["trains"][0]["otherEnd"][
+                    "locationName"
+                ]
 
         return res
 
