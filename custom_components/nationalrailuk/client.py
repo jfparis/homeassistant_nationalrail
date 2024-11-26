@@ -178,7 +178,7 @@ class NationalRailClient:
                     if delay > 9 and not perturbation:
                         perturbation = True
                 arrival_dest.append(
-                    {"name": dest["locationName"], "time_at_destination": arrival_time}
+                    {"name": dest["locationName"], "time_at_destination": arrival_time, "scheduled_time_at_destination": expected_arrival}
                 )
 
             train["scheduled"] = time
