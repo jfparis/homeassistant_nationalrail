@@ -1,9 +1,10 @@
 """Platform for sensor integration."""
+
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 import logging
 import time
-from datetime import datetime, timedelta
 
 import async_timeout
 
@@ -73,15 +74,14 @@ class NationalRailScheduleCoordinator(DataUpdateCoordinator):
         # chek whether we should refresh the data of not
         if (
             self.last_data_refresh is None
-            or (
-                self.last_data_refresh is not None
-                and (time.time() - self.last_data_refresh) > POLLING_INTERVALE * 60
-            )
+            or (time.time() - self.last_data_refresh) > POLLING_INTERVALE * 60
             or (
                 self.data["next_train_scheduled"] is not None
                 and datetime.now(self.data["next_train_scheduled"].tzinfo)
-                >= self.data["next_train_scheduled"]
-                - timedelta(minutes=HIGH_FREQUENCY_REFRESH)
+                >= (
+                    self.data["next_train_scheduled"]
+                    - timedelta(minutes=HIGH_FREQUENCY_REFRESH)
+                )
                 and not self.data["next_train_expected"] == "Cancelled"
             )
         ):

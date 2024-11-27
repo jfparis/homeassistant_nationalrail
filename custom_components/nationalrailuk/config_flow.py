@@ -1,4 +1,5 @@
 """Config flow for National Rail UK integration."""
+
 from __future__ import annotations
 
 import logging

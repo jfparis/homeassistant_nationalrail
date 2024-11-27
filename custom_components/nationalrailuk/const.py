@@ -22,3 +22,6 @@ POLLING_INTERVALE = 10
 
 # Increase polling frequency if withing X minutes of next departure or if train is late
 HIGH_FREQUENCY_REFRESH = 7
+
+
+ATTR_ENTITY_ID = "entity_id"
