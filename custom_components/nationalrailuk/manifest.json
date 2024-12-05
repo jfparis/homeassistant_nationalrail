@@ -3,12 +3,13 @@
     "name": "National Rail UK",
     "config_flow": true,
     "documentation": "https://github.com/jfparis/homeassistant_nationalrail",
+    "issue_tracker": "https://github.com/jfparis/homeassistant_nationalrail/issues",
     "requirements": ["zeep[async]==4.3.1"],
     "ssdp": [],
     "zeroconf": [],
     "homekit": {},
     "dependencies": [],
-    "version": "0.0.1",
+    "version": "0.3.4",
     "codeowners": ["@jfparis"],
     "iot_class": "cloud_polling"
 }
