@@ -3,9 +3,11 @@
 from datetime import datetime, timedelta
 import logging
 
+import httpx
 from zeep import AsyncClient, Settings, xsd
 from zeep.exceptions import Fault
 from zeep.plugins import HistoryPlugin
+from zeep.transports import AsyncTransport
 
 from .const import WSDL
 
@@ -59,7 +61,16 @@ class NationalRailClient:
 
         history = HistoryPlugin()
 
-        self.client = AsyncClient(wsdl=WSDL, settings=settings, plugins=[history])
+        wsdl_client = httpx.Client(
+            verify=True,
+            timeout=300,
+        )
+        httpx_client = httpx.AsyncClient(verify=True, timeout=300)
+        transport = AsyncTransport(client=httpx_client, wsdl_client=wsdl_client)
+
+        self.client = AsyncClient(
+            wsdl=WSDL, transport=transport, settings=settings, plugins=[history]
+        )
 
         # Prepackage the authorisation token
         header = xsd.Element(
@@ -179,7 +190,11 @@ class NationalRailClient:
                     if delay > 9 and not perturbation:
                         perturbation = True
                 arrival_dest.append(
-                    {"name": dest["locationName"], "time_at_destination": arrival_time, "scheduled_time_at_destination": expected_arrival}
+                    {
+                        "name": dest["locationName"],
+                        "time_at_destination": arrival_time,
+                        "scheduled_time_at_destination": expected_arrival,
+                    }
                 )
 
             train["scheduled"] = time
