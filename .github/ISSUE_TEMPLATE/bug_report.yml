@@ -1,0 +1,52 @@
+name: Bug Report
+description: File a bug report.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - jfparis
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for using this integration taking the time to fill out this bug report!. I will take the time to review it and *try* to help when I have a moment
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+      value: "A bug happened!"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error logs
+      description: Please check the logs of home assistant and tell us what message gig you find
+      placeholder: Tell us what you see!
+      value: "Logs"
+    validations:
+      required: true
+  - type: checkboxes
+    id: latest_version
+    attributes:
+      label: Are you running the latest version of the integration?
+      options:
+        - label: "Yes"
+    validations:
+      required: true
+  - type: input
+    id: hass_version
+    attributes:
+      label: Which version of Home Assistant are you running?
+    validations:
+      required: true
+  - type: checkboxes
+    id: existing_bugs
+    attributes:
+      label: Have you check for existing and recently closed bug reports
+      description: Right click to open in new page [bug reports](https://github.com/jfparis/homeassistant_nationalrail/issues?q=is%3Aissue%20%20)
+      options:
+        - label: "Yes"
+    validations:
+      required: true	
