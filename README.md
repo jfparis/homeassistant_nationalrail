@@ -31,7 +31,11 @@ You might want to create a binary sensor to be alerted of disruptions
 
 ## Departing board display
 
-I have not cracked the UI coding yet so I did my display with an [HTML template card](https://github.com/PiotrMachowski/Home-Assistant-Lovelace-HTML-Jinja2-Template-card).
+@ChevronTango has put together an card for this integration. You can find more information [here](https://github.com/ChevronTango/nationalrail-status-card)
+
+## DYI option
+
+A less elagant option is to use the [HTML template card](https://github.com/PiotrMachowski/Home-Assistant-Lovelace-HTML-Jinja2-Template-card) to arrange a simple display
 
     type: custom:html-template-card
     title: WYB - WAT timetable
