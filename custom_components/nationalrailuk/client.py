@@ -199,25 +199,73 @@ class NationalRailClient:
                 continue
 
             arrival_dest = []
-            for dest in destination:
-                expected_arrival = rebuild_date(time_base, dest["st"])
-                if dest["et"] == "On time":
-                    arrival_time = expected_arrival
-                elif dest["et"] == "Delayed" or dest["et"] == "Cancelled":
-                    arrival_time = dest["et"]
-                    perturbation = True
-                else:
-                    arrival_time = rebuild_date(time_base, dest["et"])
-                    delay = (arrival_time - expected_arrival).total_seconds() / 60
-                    if delay > 9 and not perturbation:
-                        perturbation = True
-                arrival_dest.append(
-                    {
-                        "name": dest["locationName"],
-                        "time_at_destination": arrival_time,
-                        "scheduled_time_at_destination": expected_arrival,
-                    }
-                )
+            dest_list = [] # Initialize dest_list
+
+            if isinstance(destination, list):
+                # Case 1: Filters were applied, destination is a list (possibly empty)
+                dest_list = destination
+            elif hasattr(destination, 'crs'): # Check if it's a single CallingPoint object
+                # Case 2: No filters applied (len(self.destinations) == 0),
+                # destination is the single last CallingPoint object. Wrap it in a list.
+                dest_list = [destination]
+            # Optional: Add specific check for dict if that's a known possibility, though less likely now
+            # elif isinstance(destination, dict):
+            #     _LOGGER.warning("Destination is a dictionary, which is unexpected. Trying to process: %s", destination)
+            #     # Decide how to handle dict - maybe try accessing keys? Or just skip?
+            elif destination is not None: # Only warn if it's truly unexpected (not None, not list, not CallingPoint)
+                _LOGGER.warning("Unexpected type or structure for destination object after filtering: %s - %s", type(destination), destination)
+                # Cannot process this, dest_list remains empty
+
+            # The rest of the loop processing dest_list remains the same
+            for dest in dest_list: # Iterate over the guaranteed list
+                # Use getattr for safe attribute access
+                st_value = getattr(dest, 'st', None) # Get scheduled time attribute 'st'
+            
+            
+                if st_value is None:
+                    _LOGGER.warning("Skipping destination - missing 'st' attribute: %s", getattr(dest, 'locationName', 'Unknown Location'))
+                    continue
+
+                try:
+                    expected_arrival = rebuild_date(time_base, st_value)
+
+                    arrival_time = None # Initialize arrival_time
+                    et_value = getattr(dest, 'et', None) # Get estimated time attribute 'et'
+
+                    if et_value == "On time":
+                       arrival_time = expected_arrival
+                    elif et_value == "Delayed" or et_value == "Cancelled":
+                       arrival_time = et_value
+                       perturbation = True
+                    elif et_value: # Check if et_value has a value (and is not 'On Time', 'Delayed', etc.)
+                        try:
+                            arrival_time = rebuild_date(time_base, et_value)
+                            delay = (arrival_time - expected_arrival).total_seconds() / 60
+                            if delay > 9 and not perturbation:
+                                perturbation = True
+                        except ValueError:
+                             _LOGGER.warning("Could not parse estimated arrival time '%s' for %s", et_value, getattr(dest, 'locationName', 'Unknown Location'))
+                             arrival_time = "Invalid Time" # Or keep as None?
+                             perturbation = True
+                    else:
+                       # If et is missing or None, assume 'On time' or handle as needed
+                       arrival_time = expected_arrival
+                       _LOGGER.debug("'et' attribute missing for destination %s, assuming on time.", getattr(dest, 'locationName', 'Unknown Location'))
+
+
+                    arrival_dest.append(
+                        {
+                            # Use getattr for locationName as well
+                            "name": getattr(dest, 'locationName', "Unknown"),
+                            "time_at_destination": arrival_time,
+                            "scheduled_time_at_destination": expected_arrival,
+                        }
+                    )
+                except Exception as e:
+                     # Log the specific destination causing trouble
+                     location_name = getattr(dest, 'locationName', 'Unknown Location')
+                     _LOGGER.error("Error processing destination %s: %s", location_name, e, exc_info=True)
+                     continue # Skip this destination on error
 
             train["scheduled"] = time
             train["expected"] = expected

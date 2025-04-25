@@ -9,16 +9,53 @@
                     "station": "Departing station",
                     "destinations": "Destination stations"
                 }
+            },
+            "station": {
+                "title": "Configure train station and monitor settings",
+                "description": "Set up general train schedule and optionally monitor a specific train",
+                "data": {
+                    "station": "Departing station",
+                    "destinations": "Destination stations (optional)",
+                    "monitor_train": "Also monitor a specific train",
+                    "target_time": "Target train time",
+                    "target_destination": "Target train destination",
+                    "time_window_minutes": "Time window around target (minutes)",
+                    "monitored_train_name": "Custom name for monitored train (optional)"
+                }
+            },
+            "api_token": {
+                "title": "Configure National Rail API Token",
+                "description": "Provide your API token for the National Rail Darwin Data Feeds",
+                "data": {
+                    "api_token": "API Token"
+                }
             }
         },
         "error": {
             "invalid_token": "Invalid National Rail Token",
             "invalid_station_input": "Invalid station/destination input",
+            "invalid_time_format": "Invalid time format. Please use HH:MM or HH:MM:SS format",
             "unknown": "[%key:common::config_flow::error::unknown%]",
             "cannot_connect": "Failed to connect to National Rail API"
         },
         "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "missing_token": "API token is required"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Update National Rail UK Settings",
+                "description": "Update settings for your train sensor",
+                "data": {
+                    "destinations": "Destination stations",
+                    "target_time": "Target train time",
+                    "target_destination": "Target train destination",
+                    "time_window_minutes": "Time window around target (minutes)",
+                    "monitored_train_name": "Custom name for monitored train"
+                }
+            }
         }
     }
 }

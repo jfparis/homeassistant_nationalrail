@@ -7,9 +7,22 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
+import homeassistant.helpers.config_validation as cv  # Add this import
+from datetime import time
 
 from .client import NationalRailClient, NationalRailClientException, NationalRailClientInvalidToken, NationalRailClientInvalidInput
-from .const import CONF_DESTINATIONS, CONF_STATION, CONF_TOKEN, DOMAIN
+from .const import (
+    CONF_DESTINATIONS, 
+    CONF_STATION, 
+    CONF_TOKEN,
+    DOMAIN,
+    CONF_MONITOR_TRAIN,
+    CONF_TARGET_TIME,
+    CONF_TARGET_DESTINATION,
+    CONF_TIME_WINDOW_MINUTES,
+    CONF_MONITORED_TRAIN_NAME,
+    DEFAULT_TIME_WINDOW
+)
 from .stations import STATIONS, STATION_MAP
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +38,19 @@ def parse_destinations(destinations_str):
     
     # Otherwise treat it as a string and split
     return [d.strip() for d in destinations_str.split(",") if d.strip()]
+
+def parse_time_string(time_str):
+    """Parse HH:MM or HH:MM:SS string into time object."""
+    if not time_str:
+        return None
+    
+    parts = time_str.split(":")
+    if len(parts) == 2:
+        return time(int(parts[0]), int(parts[1]))
+    elif len(parts) == 3:
+        return time(int(parts[0]), int(parts[1]), int(parts[2]))
+    else:
+        raise ValueError(f"Invalid time format: {time_str}")
 
 async def validate_api_token(hass, token: str) -> bool:
     """Validate the API token by making a test API call."""
@@ -277,6 +303,17 @@ class NationalRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         ]
         
         if user_input is not None:
+            # Add this validation
+            if not user_input.get(CONF_MONITOR_TRAIN) and (
+                user_input.get(CONF_TARGET_TIME) or 
+                user_input.get(CONF_TARGET_DESTINATION)
+            ):
+                errors["base"] = "toggle_required"
+                return self.async_show_form(
+                    step_id="station",
+                    data_schema=self._get_station_schema(station_options, station_select_options),
+                    errors=errors
+                )
             try:
                 # Store token locally but don't include in user_input that will be saved
                 local_token = self._token
@@ -292,6 +329,24 @@ class NationalRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if CONF_TOKEN in user_input:
                     del user_input[CONF_TOKEN]
                 
+                # Handle and prepare target time if monitoring specific train
+                if user_input.get(CONF_MONITOR_TRAIN, False) and CONF_TARGET_TIME in user_input:
+                    # Convert time input string to time object and back to string for storage
+                    if isinstance(user_input[CONF_TARGET_TIME], str):
+                        try:
+                            # Parse the time string
+                            target_time = parse_time_string(user_input[CONF_TARGET_TIME])
+                            # Only store hours and minutes, setting seconds to 00
+                            user_input[CONF_TARGET_TIME] = target_time.strftime("%H:%M:00")
+                        except ValueError as e:
+                            _LOGGER.error("Invalid time format: %s", e)
+                            errors["base"] = "invalid_time_format"
+                            return self.async_show_form(
+                                step_id="station", 
+                                data_schema=self._get_station_schema(station_options, station_select_options),
+                                errors=errors
+                            )
+                
                 # Set title based on station name and destination
                 station_name = STATION_MAP.get(user_input[CONF_STATION], user_input[CONF_STATION])
                 destination_names = []
@@ -305,9 +360,20 @@ class NationalRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     for dest in destinations:
                         destination_names.append(STATION_MAP.get(dest, dest))
                 
-                title = f"Train Schedule {user_input[CONF_STATION]}"
-                if destination_names:
-                    title += f" -> {', '.join(destination_names)}"
+                if user_input.get(CONF_MONITOR_TRAIN, False):
+                    # Use specified name or create one
+                    if not user_input.get(CONF_MONITORED_TRAIN_NAME):
+                        target_time = user_input[CONF_TARGET_TIME]
+                        target_dest = STATION_MAP.get(user_input[CONF_TARGET_DESTINATION], 
+                                                     user_input[CONF_TARGET_DESTINATION])
+                        title = f"Train {station_name} -> {target_dest} @ {target_time}"
+                        user_input[CONF_MONITORED_TRAIN_NAME] = f"Train to {target_dest} @ {target_time}"
+                    else:
+                        title = user_input[CONF_MONITORED_TRAIN_NAME]
+                else:
+                    title = f"Train Schedule {user_input[CONF_STATION]}"
+                    if destination_names:
+                        title += f" -> {', '.join(destination_names)}"
                 
                 return self.async_create_entry(title=title, data=user_input)
             except NationalRailClientException as ex:
@@ -317,8 +383,17 @@ class NationalRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Invalid station input: %s", ex)
                 errors["base"] = "invalid_station_input"
         
-        # Data schema with dropdowns and multi-select
-        data_schema = vol.Schema({
+        # Show form with all required fields
+        return self.async_show_form(
+            step_id="station", 
+            data_schema=self._get_station_schema(station_options, station_select_options),
+            errors=errors
+        )
+    
+    def _get_station_schema(self, station_options, station_select_options):
+        """Get the schema for the station configuration step."""
+        # Include all fields, but make monitoring fields optional
+        schema_dict = {
             vol.Required(CONF_STATION): vol.In(station_options),
             vol.Optional(CONF_DESTINATIONS, default=[]): selector.SelectSelector(
                 selector.SelectSelectorConfig(
@@ -327,17 +402,23 @@ class NationalRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     mode=selector.SelectSelectorMode.DROPDOWN
                 )
             ),
-        })
+            vol.Optional(CONF_MONITOR_TRAIN, default=False): selector.BooleanSelector(),
+            # Always include these fields but clearly indicate they're for monitored trains
+            vol.Optional(CONF_TARGET_TIME): selector.TimeSelector(),  # Simplified time selector
+            vol.Optional(CONF_TARGET_DESTINATION): vol.In(station_options),
+            vol.Optional(CONF_TIME_WINDOW_MINUTES, default=DEFAULT_TIME_WINDOW): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=5,
+                    max=60,
+                    step=5,
+                    unit_of_measurement="minutes"
+                )
+            ),
+            vol.Optional(CONF_MONITORED_TRAIN_NAME): cv.string
+            
+        }
         
-        return self.async_show_form(
-            step_id="station", data_schema=data_schema, errors=errors
-        )
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
-        """Get the options flow for this handler."""
-        return OptionsFlowHandler(config_entry)
+        return vol.Schema(schema_dict)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
@@ -349,6 +430,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Store any needed properties from config_entry directly
         self._entry_data = config_entry.data
         self._destinations = parse_destinations(config_entry.data.get(CONF_DESTINATIONS, ""))
+        self._monitor_train = config_entry.data.get(CONF_MONITOR_TRAIN, False)
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -356,6 +438,17 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             # Convert multi-select list to comma-separated string if needed
             if isinstance(user_input.get(CONF_DESTINATIONS), list):
                 user_input[CONF_DESTINATIONS] = ",".join(user_input[CONF_DESTINATIONS])
+                
+            # Always store time with seconds set to 00
+            if CONF_TARGET_TIME in user_input:
+                # Format time as HH:MM:00
+                try:
+                    time_parts = user_input[CONF_TARGET_TIME].split(":")
+                    if len(time_parts) >= 2:
+                        user_input[CONF_TARGET_TIME] = f"{time_parts[0]}:{time_parts[1]}:00"
+                except Exception:
+                    # Keep the original value if parsing fails
+                    pass
                 
             return self.async_create_entry(title="", data=user_input)
 
@@ -366,21 +459,49 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             for station in STATIONS
         ]
         
+        station_options = {station["code"]: f"{station['name']} ({station['code']})" 
+                         for station in STATIONS}
+        
         # Get current destinations as a list
         current_destinations = parse_destinations(
             self.config_entry.data.get(CONF_DESTINATIONS, "")
         )
         
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema({
-                vol.Optional(CONF_DESTINATIONS, default=current_destinations): 
-                selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=station_select_options,
-                        multiple=True,
-                        mode=selector.SelectSelectorMode.DROPDOWN
+
+        
+        schema = vol.Schema({
+            vol.Optional(CONF_DESTINATIONS, default=current_destinations): 
+            selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=station_select_options,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.DROPDOWN
+                )
+            ),
+            
+        })
+        
+        # If this is a monitored train entry, add appropriate options
+        if self._monitor_train:
+            # Parse the current target time back to a time object
+            current_target_time = self.config_entry.data.get(CONF_TARGET_TIME)
+            current_target_dest = self.config_entry.data.get(CONF_TARGET_DESTINATION)
+            current_time_window = self.config_entry.data.get(CONF_TIME_WINDOW_MINUTES, DEFAULT_TIME_WINDOW)
+            current_name = self.config_entry.data.get(CONF_MONITORED_TRAIN_NAME, "")
+            
+            schema = vol.Schema({
+                vol.Optional(CONF_TARGET_TIME, default=current_target_time): selector.TimeSelector(),  # Simplified
+                vol.Optional(CONF_TARGET_DESTINATION, default=current_target_dest): vol.In(station_options),
+                vol.Optional(CONF_TIME_WINDOW_MINUTES, default=current_time_window): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=5,
+                        max=60,
+                        step=5,
+                        unit_of_measurement="minutes"
                     )
                 ),
+                vol.Optional(CONF_MONITORED_TRAIN_NAME, default=current_name): cv.string
+                
             })
-        )
+        
+        return self.async_show_form(step_id="init", data_schema=schema)
